@@ -2,8 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "foundry.imgui.fabric.mixin",
-  "refmap": "${id}.refmap.json",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "client": [
     "WindowMixin"
   ],
@@ -11,4 +10,3 @@
     "defaultRequire": 1
   }
 }
-

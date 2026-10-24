@@ -30,10 +30,11 @@ public class ImGuiHandler {
     private final AtomicBoolean active;
     private final AtomicBoolean fontsDirty;
     private long frame;
+    private boolean closed;
 
     public ImGuiHandler(final Window mainWindow) {
         this.mainWindow = mainWindow;
-        this.windowImpl = new ImGuiWindowHandlerGLFW(this);
+        this.windowImpl = new ImGuiWindowHandlerSDL3(this);
         this.rendererImpl = ImGuiMCPlatform.INSTANCE.createRenderer();
         this.fontManager = ImGuiMCPlatform.INSTANCE.createFontManager();
 
@@ -49,12 +50,12 @@ public class ImGuiHandler {
             this.rendererImpl.init();
 
             final ImGuiWindowHandler.ClientApi clientApi;
-            //? if >=1.21.6 {
-            /*//? if >=26.2 {
-            /^final String backendName = RenderSystem.getDevice().getDeviceInfo().backendName().toLowerCase(java.util.Locale.ROOT);
-             ^///? } else {
-            final String backendName = RenderSystem.getDevice().getBackendName().toLowerCase(java.util.Locale.ROOT);
-            //? }
+            
+            
+            final String backendName = RenderSystem.getDevice().getDeviceInfo().backendName().toLowerCase(java.util.Locale.ROOT);
+             
+            
+
             if (backendName.contains("vulkan")) {
                 clientApi = ImGuiWindowHandler.ClientApi.VULKAN;
             } else if (backendName.contains("opengl")) {
@@ -62,9 +63,9 @@ public class ImGuiHandler {
             } else {
                 clientApi = ImGuiWindowHandler.ClientApi.OTHER;
             }
-            *///? } else {
-            clientApi = ImGuiWindowHandler.ClientApi.OPENGL;
-            //? }
+            
+            
+
 
             this.windowImpl.init(mainWindow, true, clientApi);
             ImGuiMCPlatform.INSTANCE.imGuiLoadPost();
@@ -198,5 +199,20 @@ public class ImGuiHandler {
 
     public long getFrame() {
         return this.frame;
+    }
+    public void shutdown() {
+        if (this.closed) return;
+        this.closed = true;
+        try {
+            this.start();
+            if (this.active.getAndSet(false)) ImGui.endFrame();
+            this.windowImpl.shutdown();
+            this.rendererImpl.free();
+            this.fontManager.free();
+        } finally {
+            this.stop();
+            ImPlot.destroyContext(this.imPlotContext);
+            ImGui.destroyContext(this.imGuiContext);
+        }
     }
 }

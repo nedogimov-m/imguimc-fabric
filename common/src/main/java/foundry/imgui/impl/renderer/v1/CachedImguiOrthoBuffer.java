@@ -1,10 +1,10 @@
 package foundry.imgui.impl.renderer.v1;
 
-//? if >=1.21.6 {
 
-/*import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
+
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
 import com.mojang.blaze3d.systems.RenderSystem;
 import org.jetbrains.annotations.ApiStatus;
 import org.joml.Matrix4f;
@@ -37,13 +37,15 @@ public class CachedImguiOrthoBuffer implements AutoCloseable {
         this.slice = this.buffer.slice(0, RenderSystem.PROJECTION_MATRIX_UBO_SIZE);
     }
 
-    public GpuBufferSlice getBuffer(final float left, final float right, final float bottom, final float top) {
+    public GpuBufferSlice getBuffer(CommandEncoder encoder,final float left, final float right, final float bottom, final float top) {
         if (this.left != left || this.right != right || this.bottom != bottom || this.top != top) {
-            final Matrix4f matrix4f = this.projectionMatrix.setOrtho(left, right, bottom, top, this.zNear, this.zFar);
+            // Vulkan's native viewport maps NDC -Y to the top; OpenGL maps +Y to the top.
+            final boolean nativeYDown=RenderSystem.getDevice().getDeviceInfo().backendName().toLowerCase(java.util.Locale.ROOT).contains("vulkan");
+            final Matrix4f matrix4f = this.projectionMatrix.setOrtho(left, right, nativeYDown?top:bottom, nativeYDown?bottom:top, this.zNear, this.zFar);
 
             try (final MemoryStack stack = MemoryStack.stackPush()) {
-                final ByteBuffer buffer = Std140Builder.onStack(stack, RenderSystem.PROJECTION_MATRIX_UBO_SIZE).putMat4f(matrix4f).get();
-                RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.buffer.slice(), buffer);
+                final ByteBuffer buffer = stack.malloc(64); matrix4f.get(buffer);
+                encoder.writeToBuffer(this.buffer.slice(), buffer);
             }
 
             this.left = left;
@@ -60,4 +62,3 @@ public class CachedImguiOrthoBuffer implements AutoCloseable {
         this.buffer.close();
     }
 }
-*///?}

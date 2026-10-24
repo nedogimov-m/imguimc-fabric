@@ -1,8 +1,7 @@
 package foundry.imgui.impl.font.v1;
 
-//? if >=1.21.4 {
 
-/*import static org.lwjgl.glfw.GLFW.*;
+
 import foundry.imgui.api.ImGuiMC;
 import foundry.imgui.impl.ImGuiMCImpl;
 import foundry.imgui.impl.font.ImGuiFontManager;
@@ -12,7 +11,7 @@ import imgui.ImFontAtlas;
 import imgui.ImFontConfig;
 import imgui.ImGui;
 import net.minecraft.resources.FileToIdConverter;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.jetbrains.annotations.ApiStatus;
@@ -22,7 +21,6 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.NativeResource;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.FloatBuffer;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -34,8 +32,8 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
     private static final FileToIdConverter FONT_LISTER = new FileToIdConverter("imgui_font", ".ttf");
     private static final DecimalFormat FONT_FORMAT = new DecimalFormat("0.#");
 
-    private Map<ResourceLocation, FontPackBuilder> fontBuilders;
-    private Map<ResourceLocation, FontPack> fonts;
+    private Map<Identifier, FontPackBuilder> fontBuilders;
+    private Map<Identifier, FontPack> fonts;
     private ImFont defaultFont;
 
     public ImGuiFontManagerImpl() {
@@ -44,7 +42,7 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
     }
 
     @Override
-    public ImFont getFont(@Nullable final ResourceLocation name, final boolean bold, final boolean italic) {
+    public ImFont getFont(@Nullable final Identifier name, final boolean bold, final boolean italic) {
         if (name == null) {
             return this.defaultFont;
         }
@@ -61,8 +59,8 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
         }
     }
 
-    //? if >=1.21.9 {
-    /^@NotNull
+    
+    @NotNull
     @Override
     public CompletableFuture<Void> reload(
             final @NotNull SharedState sharedState,
@@ -70,21 +68,21 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
             final @NotNull PreparationBarrier preparationBarrier,
             final @NotNull Executor applyExecutor) {
         final ResourceManager resourceManager = sharedState.resourceManager();
-        ^///?} else {
-    @NotNull
-    @Override
-    public CompletableFuture<Void> reload(
-            final PreparationBarrier preparationBarrier,
-            @NotNull final ResourceManager resourceManager,
-            @NotNull final Executor executor,
-            @NotNull final Executor applyExecutor) {
-        //?}
+        
+    
+
+
+
+
+
+
+
 
         return CompletableFuture.supplyAsync(() -> {
-            final Map<ResourceLocation, FontData> fontData = new HashMap<>();
+            final Map<Identifier, FontData> fontData = new HashMap<>();
 
-            for (final Map.Entry<ResourceLocation, Resource> entry : FONT_LISTER.listMatchingResources(resourceManager).entrySet()) {
-                final ResourceLocation id = FONT_LISTER.fileToId(entry.getKey());
+            for (final Map.Entry<Identifier, Resource> entry : FONT_LISTER.listMatchingResources(resourceManager).entrySet()) {
+                final Identifier id = FONT_LISTER.fileToId(entry.getKey());
                 final Resource resource = entry.getValue();
                 try (final InputStream stream = resource.open()) {
                     final short[] ranges = resource.metadata().getSection(ImGuiFontRangesMetadataSection.TYPE)
@@ -101,18 +99,18 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
 
             return fontData;
         }, executor).thenCompose(preparationBarrier::wait).thenAcceptAsync(fontData -> {
-            final Map<ResourceLocation, FontPackBuilder> fontBuilders = new HashMap<>();
+            final Map<Identifier, FontPackBuilder> fontBuilders = new HashMap<>();
 
             this.fontBuilders.values().forEach(FontPackBuilder::free);
             this.fontBuilders = Map.of();
-            for (final Map.Entry<ResourceLocation, FontData> entry : fontData.entrySet()) {
-                final ResourceLocation id = entry.getKey();
+            for (final Map.Entry<Identifier, FontData> entry : fontData.entrySet()) {
+                final Identifier id = entry.getKey();
                 final String[] parts = id.getPath().split("-", 2);
                 if (parts.length < 2) {
                     continue;
                 }
 
-                final ResourceLocation name = ResourceLocation.tryBuild(id.getNamespace(), parts[0]);
+                final Identifier name = Identifier.tryBuild(id.getNamespace(), parts[0]);
                 if (name == null) {
                     ImGuiMCImpl.LOGGER.error("Invalid font name: {}:{}", id.getNamespace(), parts[0]);
                     continue;
@@ -139,23 +137,17 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
     public void rebuildFonts(final ImFontAtlas atlas) {
         float scale;
         try (final MemoryStack stack = MemoryStack.stackPush()) {
-            final Map<ResourceLocation, FontPack> fonts = new HashMap<>();
+            final Map<Identifier, FontPack> fonts = new HashMap<>();
 
             atlas.clear();
 
-            final FloatBuffer xscale = stack.mallocFloat(1);
-            final FloatBuffer yscale = stack.mallocFloat(1);
-            glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), xscale, yscale);
+            // SDL distinguishes monitor content scale from actual framebuffer pixel density.
+            // The renderer already accounts for framebuffer density; font size stays in logical coordinates.
+            final long window=net.minecraft.client.Minecraft.getInstance().getWindow().handle();
+            final float density=org.lwjgl.sdl.SDLVideo.SDL_GetWindowPixelDensity(window);
+            scale=Math.max(1.0F,ImGuiFontManager.getFontScale()/Math.max(1.0F,density));
 
-            scale = Math.max(xscale.get(0), yscale.get(0));
-            // Hack because macs and wayland seem to report massive values for some reason
-            final int platform = glfwGetPlatform();
-            if (platform == GLFW_PLATFORM_COCOA || platform == GLFW_PLATFORM_WAYLAND) {
-                scale /= 2;
-            }
-            scale = Math.max(1.0F, scale);
-
-            for (final Map.Entry<ResourceLocation, FontPackBuilder> entry : this.fontBuilders.entrySet()) {
+            for (final Map.Entry<Identifier, FontPackBuilder> entry : this.fontBuilders.entrySet()) {
                 ImGuiMCImpl.LOGGER.info("Built {}", entry.getKey());
                 fonts.put(entry.getKey(), entry.getValue().build(scale));
             }
@@ -175,48 +167,24 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
 
     @Override
     public void free() {
-        for (final ImGuiFontManagerImpl.FontPack fontPack : this.fonts.values()) {
-            fontPack.free();
-        }
-        this.fonts = Map.of();
+        // ImFontAtlas owns and destroys every ImFont and copied font-data buffer.
+        // This manager only owns prepared Java data; destroying ImFont here double-frees the atlas.
+        this.fontBuilders.values().forEach(FontPackBuilder::free);
+        this.fontBuilders=Map.of();this.fonts=Map.of();this.defaultFont=null;
     }
 
-    private record FontPack(ImFont regular,
-                            ImFont italic,
-                            ImFont bold,
-                            ImFont boldItalic,
-                            ImFontConfig[] configs) implements NativeResource {
-
-        @Override
-        public void free() {
-            this.regular.destroy();
-            if (this.italic != this.regular) {
-                this.italic.destroy();
-            }
-            if (this.bold != this.regular) {
-                this.bold.destroy();
-            }
-            if (this.boldItalic != this.regular) {
-                this.boldItalic.destroy();
-            }
-            for (final ImFontConfig config : this.configs) {
-                config.destroy();
-            }
-        }
-    }
+    private record FontPack(ImFont regular,ImFont italic,ImFont bold,ImFont boldItalic) {}
 
     private static class FontPackBuilder implements NativeResource {
 
-        private final ResourceLocation name;
-        private final List<ImFontConfig> configs;
+        private final Identifier name;
         private FontData main;
         private FontData italic;
         private FontData bold;
         private FontData boldItalic;
 
-        private FontPackBuilder(final ResourceLocation name) {
+        private FontPackBuilder(final Identifier name) {
             this.name = name;
-            this.configs = new ArrayList<>(4);
         }
 
         private ImFont loadOrDefault(@Nullable final FontData data, final String type, final float scale, final ImFont defaultFont) {
@@ -224,12 +192,12 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
                 return defaultFont;
             } else {
                 final ImFontConfig fontConfig = new ImFontConfig();
-                this.configs.add(fontConfig);
                 final float sizePixels = data.size * scale;
                 fontConfig.setGlyphRanges(data.ranges);
                 fontConfig.setName(this.name.getPath() + " " + type + " " + FONT_FORMAT.format(sizePixels) + " px");
                 fontConfig.setPixelSnapH(true);
-                return ImGui.getIO().getFonts().addFontFromMemoryTTF(data.bytes, sizePixels, fontConfig);
+                try{return ImGui.getIO().getFonts().addFontFromMemoryTTF(data.bytes, sizePixels, fontConfig);}
+                finally{fontConfig.destroy();}
             }
         }
 
@@ -238,17 +206,11 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
             final ImFont italic = this.loadOrDefault(this.italic, "italic", scale, main);
             final ImFont bold = this.loadOrDefault(this.bold, "bold", scale, main);
             final ImFont boldItalic = this.loadOrDefault(this.boldItalic, "bold_italic", scale, bold);
-            return new FontPack(main, italic, bold, boldItalic, this.configs.toArray(ImFontConfig[]::new));
+            return new FontPack(main, italic, bold, boldItalic);
         }
 
         @Override
         public void free() {
-            final Iterator<ImFontConfig> iterator = this.configs.iterator();
-            while (iterator.hasNext()) {
-                iterator.next().destroy();
-                iterator.remove();
-            }
-
             this.main = null;
             this.italic = null;
             this.bold = null;
@@ -259,4 +221,3 @@ public class ImGuiFontManagerImpl implements ImGuiFontManager {
     private record FontData(byte[] bytes, short[] ranges, float size) {
     }
 }
-*///?}

@@ -9,48 +9,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public class MinecraftMixin {
-
-    //? if >=26.1 {
-    /*@Inject(method = "renderFrame", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", args = "ldc=extract"))
-    *///? } else if >=1.21 {
-    @Inject(method = "runTick", at = {
-            @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;push(Ljava/lang/String;)V", args = "ldc=mouse"),
-            @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", args = "ldc=mouse")
-    })
-            //? } else {
-    /*@Inject(method = "runTick", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;push(Ljava/lang/String;)V", args = "ldc=display"))
-     *///? }
-    public void beginFrame(final CallbackInfo ci) {
-        if (ImGuiMCImpl.handler != null) {
-            ImGuiMCImpl.handler.beginFrame();
-        }
+    @Inject(method = "renderFrame", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", args = "ldc=extract"))
+    private void imguimc$beginFrame(CallbackInfo ci) {
+        if (ImGuiMCImpl.handler != null) ImGuiMCImpl.handler.beginFrame();
     }
 
-    //? if >=26.1 {
-    /*@Inject(method = "renderFrame", at=@At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;push(Ljava/lang/String;)V", args = "ldc=present"))
-     *///? } elif >=1.21.6 {
-    /*@Inject(method = "runTick", at = {
-            @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;push(Ljava/lang/String;)V", args = "ldc=blit"),
-            @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", args = "ldc=blit")
-    })
-            *///? } else {
-    @Inject(method = "runTick", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", args = "ldc=updateDisplay"))
-     //? }
-    public void endFrame(final CallbackInfo ci) {
-        if (ImGuiMCImpl.handler != null) {
-            ImGuiMCImpl.handler.endFrame();
-            //? if <26.2 {
-            ImGuiMCImpl.handler.swapBuffers();
-            //? }
-        }
+    @Inject(method = "renderFrame", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;render()V", shift = At.Shift.AFTER))
+    private void imguimc$drawBeforeMainSurfaceBlit(CallbackInfo ci) {
+        if (ImGuiMCImpl.handler != null) ImGuiMCImpl.handler.endFrame();
     }
 
-    //? if >=26.2 {
-    /*@Inject(method = "renderFrame", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;submit()V", shift = At.Shift.AFTER))
-    public void swapBuffers(final CallbackInfo ci) {
+    @Inject(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/commands/CommandEncoder;submit()V", shift = At.Shift.AFTER))
+    private void imguimc$presentSubmittedSurfaces(CallbackInfo ci) {
+        if (ImGuiMCImpl.handler != null) ImGuiMCImpl.handler.swapBuffers();
+    }
+
+    @Inject(method = "close", at = @At("HEAD"))
+    private void imguimc$shutdown(CallbackInfo ci) {
         if (ImGuiMCImpl.handler != null) {
-            ImGuiMCImpl.handler.swapBuffers();
+            try { ImGuiMCImpl.handler.shutdown(); }
+            finally { ImGuiMCImpl.handler = null; }
         }
     }
-    *///? }
 }

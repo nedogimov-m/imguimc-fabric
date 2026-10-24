@@ -1,8 +1,8 @@
 package foundry.imgui.mixin.renderer.v2;
 
-//? if >=1.21.6 {
 
-/*import com.mojang.blaze3d.textures.GpuTextureView;
+
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import foundry.imgui.api.ImGuiMC;
 import foundry.imgui.api.ImGuiTextureProvider;
 import net.minecraft.client.renderer.texture.AbstractTexture;
@@ -26,4 +26,3 @@ public abstract class AbstractTextureMixin implements ImGuiTextureProvider {
     }
 }
 
-*///?}

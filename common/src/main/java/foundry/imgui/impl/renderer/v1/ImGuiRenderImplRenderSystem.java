@@ -1,21 +1,21 @@
 package foundry.imgui.impl.renderer.v1;
 
-//? if >=1.21.6 {
 
-/*import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.shaders.ShaderType;
-import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.renderpearl.api.pipeline.ShaderType;
+import com.mojang.renderpearl.api.pipeline.UniformType;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.device.GpuDevice;
+import com.mojang.renderpearl.api.commands.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import foundry.imgui.api.ImGuiMC;
 import foundry.imgui.api.ImGuiSampler;
 import foundry.imgui.api.ImGuiTextureProvider;
@@ -29,7 +29,7 @@ import imgui.flag.ImGuiConfigFlags;
 import imgui.flag.ImGuiViewportFlags;
 import imgui.type.ImInt;
 import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 import java.util.*;
@@ -40,49 +40,49 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
     private static final VertexFormat VERTEX_FORMAT;
 
     static {
-        //? if >=26.2 {
-        /^VERTEX_FORMAT = VertexFormat.builder(0)
-                .addAttribute("Position", com.mojang.blaze3d.GpuFormat.RG32_FLOAT)
-                .addAttribute("UV", com.mojang.blaze3d.GpuFormat.RG32_FLOAT)
-                .addAttribute("Color", com.mojang.blaze3d.GpuFormat.RGBA8_UNORM)
+        
+        VERTEX_FORMAT = VertexFormat.builder(0)
+                .addAttribute("Position", com.mojang.renderpearl.api.GpuFormat.RG32_FLOAT)
+                .addAttribute("UV", com.mojang.renderpearl.api.GpuFormat.RG32_FLOAT)
+                .addAttribute("Color", com.mojang.renderpearl.api.GpuFormat.RGBA8_UNORM)
                 .build();
-        ^///? } else {
+        
 
-        com.mojang.blaze3d.vertex.VertexFormatElement posElement = null;
-        for (int i = 7; i < com.mojang.blaze3d.vertex.VertexFormatElement.MAX_COUNT; i++) {
-            final com.mojang.blaze3d.vertex.VertexFormatElement element = com.mojang.blaze3d.vertex.VertexFormatElement.byId(i);
-            if (element == null) {
-                //? if >= 26.1 {
-                /^posElement = com.mojang.blaze3d.vertex.VertexFormatElement.register(i, 0, com.mojang.blaze3d.vertex.VertexFormatElement.Type.FLOAT, false, 2);
-                ^///? } else {
-                posElement = com.mojang.blaze3d.vertex.VertexFormatElement.register(i, 0, com.mojang.blaze3d.vertex.VertexFormatElement.Type.FLOAT, com.mojang.blaze3d.vertex.VertexFormatElement.Usage.POSITION, 2);
-                 //? }
-                break;
-            }
-        }
+        
 
-        if (posElement == null) {
-            throw new IllegalStateException("Failed to create vertex format");
-        }
 
-        VERTEX_FORMAT = VertexFormat.builder()
-                .add("Position", posElement)
-                .add("UV", com.mojang.blaze3d.vertex.VertexFormatElement.UV0)
-                .add("Color", com.mojang.blaze3d.vertex.VertexFormatElement.COLOR)
-                .build();
-        //? }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
     private static final String VERTEX_SHADER = """
-            #version 410 core
+            #version 450
             layout (location = 0) in vec2 Position;
             layout (location = 1) in vec2 UV;
             layout (location = 2) in vec4 Color;
             layout(std140) uniform Projection {
                 mat4 ProjMtx;
             };
-            out vec2 Frag_UV;
-            out vec4 Frag_Color;
+            layout(location=0) out vec2 Frag_UV;
+            layout(location=1) out vec4 Frag_Color;
             void main()
             {
                 Frag_UV = UV;
@@ -91,9 +91,9 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
             }
             """;
     private static final String FRAGMENT_SHADER = """
-            #version 410 core
-            in vec2 Frag_UV;
-            in vec4 Frag_Color;
+            #version 450
+            layout(location=0) in vec2 Frag_UV;
+            layout(location=1) in vec4 Frag_Color;
             uniform sampler2D Texture;
             layout (location = 0) out vec4 Out_Color;
             void main()
@@ -101,81 +101,81 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
                 Out_Color = Frag_Color * texture(Texture, Frag_UV.st);
             }
             """;
-    private static final Map<ResourceLocation, String> SOURCES_MAP = Map.of(
-            ResourceLocation.fromNamespaceAndPath(ImGuiMC.MOD_ID, "shader_vertex"), VERTEX_SHADER,
-            ResourceLocation.fromNamespaceAndPath(ImGuiMC.MOD_ID, "shader_fragment"), FRAGMENT_SHADER
+    private static final Map<Identifier, String> SOURCES_MAP = Map.of(
+            Identifier.fromNamespaceAndPath(ImGuiMC.MOD_ID, "shader_vertex"), VERTEX_SHADER,
+            Identifier.fromNamespaceAndPath(ImGuiMC.MOD_ID, "shader_fragment"), FRAGMENT_SHADER
     );
 
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder()
-            .withLocation(ResourceLocation.fromNamespaceAndPath(ImGuiMC.MOD_ID, "pipeline/imgui"))
-            .withVertexShader(ResourceLocation.fromNamespaceAndPath(ImGuiMC.MOD_ID, "shader_vertex"))
-            .withFragmentShader(ResourceLocation.fromNamespaceAndPath(ImGuiMC.MOD_ID, "shader_fragment"))
-            //? if >=26.2 {
-            /^.withBindGroupLayout(com.mojang.blaze3d.pipeline.BindGroupLayout.builder()
-                    .withSampler("Texture")
+    private static RenderPipeline createPipeline(com.mojang.renderpearl.api.GpuFormat format) { return RenderPipeline.builder()
+            .withLocation(Identifier.fromNamespaceAndPath(ImGuiMC.MOD_ID, "pipeline/imgui"))
+            .withVertexShader(Identifier.fromNamespaceAndPath(ImGuiMC.MOD_ID, "shader_vertex"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath(ImGuiMC.MOD_ID, "shader_fragment"))
+            
+            .withBindGroupLayout(com.mojang.renderpearl.api.pipeline.BindGroupLayout.builder()
+                    .withUniform("Texture",UniformType.COMBINED_IMAGE_SAMPLER)
                     .withUniform("Projection", UniformType.UNIFORM_BUFFER)
                     .build())
-            ^///? } else {
-            .withSampler("Texture")
-            .withUniform("Projection", UniformType.UNIFORM_BUFFER)
-            //? }
-            //? if >=26.2 {
-            /^.withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(BlendFunction.TRANSLUCENT))
-             ^///? } else if >=26.1 {
-            /^.withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(Optional.of(BlendFunction.TRANSLUCENT), com.mojang.blaze3d.pipeline.ColorTargetState.WRITE_ALL))
-            ^///? } else {
-            .withBlend(BlendFunction.TRANSLUCENT)
-             //? }
-            .withCull(false)
-            //? if >=26.2 {
-            /^.withVertexBinding(0, VERTEX_FORMAT)
-            .withPrimitiveTopology(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES)
-            ^///? } else {
-            .withVertexFormat(VERTEX_FORMAT, VertexFormat.Mode.TRIANGLES)
-            //? }
-            //? if >=26.1 {
-            /^.withDepthStencilState(Optional.empty())
-            ^///? } else {
-            .withDepthTestFunction(com.mojang.blaze3d.platform.DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false)
-            //? }
-            .build();
+            
+            
 
-    private static String getShaderSource(final ResourceLocation name, final ShaderType shaderType) {
+
+            
+            .withColorTargetState(new com.mojang.renderpearl.api.pipeline.ColorTargetState(Optional.of(BlendFunction.TRANSLUCENT),format,com.mojang.renderpearl.api.pipeline.ColorTargetState.WRITE_ALL))
+             
+            
+
+            
+
+            .withCull(false)
+            
+            .withVertexBinding(0, VERTEX_FORMAT)
+            .withPrimitiveTopology(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.TRIANGLES)
+            
+            
+
+            
+            .withDepthStencilState(Optional.empty())
+            
+            
+
+
+            .build(); }
+
+    private static String getShaderSource(final Identifier name, final ShaderType shaderType) {
         return SOURCES_MAP.get(name);
     }
 
-    //? if >= 1.21.11 {
-    /^public long addTexture(final GpuTextureView view, @Nullable final com.mojang.blaze3d.textures.GpuSampler sampler) {
+    
+    public long addTexture(final GpuTextureView view, @Nullable final com.mojang.renderpearl.api.textures.GpuSampler sampler) {
         this.data.textures.add(view);
         this.data.samplers.add(sampler);
         return this.data.textures.size() + 1;
     }
-    ^///? } else {
-    public long addTexture(final GpuTextureView view) {
-        this.data.textures.add(view);
-        return this.data.textures.size() + 1;
-    }
-    //? }
+    
+    
 
-    /^*
+
+
+
+
+    /**
      * Data class to store implementation specific fields.
      * Same as {@code ImGui_ImplOpenGL3_Data}.
-     ^/
+     */
     protected static class Data {
         protected GpuTextureView fontTextureView;
         protected GpuTexture fontTexture;
         protected ViewportData mainViewportData;
         protected List<GpuTextureView> textures = new ArrayList<>();
-        //? if >= 1.21.11 {
-        /^protected List<com.mojang.blaze3d.textures.GpuSampler> samplers = new ArrayList<>();
-        ^///? }
+        
+        protected List<com.mojang.renderpearl.api.textures.GpuSampler> samplers = new ArrayList<>();
+        
     }
 
-    /^*
+    /**
      * Data class to store implementation specific fields.
      * Same as {@code ImGui_ImplOpenGL3_Data}.
-     ^/
+     */
     protected static class ViewportData implements ImGuiWindowHandler.RenderViewportData {
         protected CachedImguiOrthoBuffer projectionMatrixBuffer;
         protected List<GpuBuffer> vertexData = new ArrayList<>();
@@ -205,8 +205,12 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         }
 
         public void updateRenderTarget(final ImGuiViewport viewport) {
-            final int width = (int) viewport.getSizeX();
-            final int height = (int) viewport.getSizeY();
+            final int width,height;
+            try(var stack=org.lwjgl.system.MemoryStack.stackPush()){
+                final var w=stack.mallocInt(1);final var h=stack.mallocInt(1);
+                if(!org.lwjgl.sdl.SDLVideo.SDL_GetWindowSizeInPixels(viewport.getPlatformHandle(),w,h))throw new IllegalStateException("Cannot query native ImGui viewport framebuffer");
+                width=Math.max(1,w.get(0));height=Math.max(1,h.get(0));
+            }
             if (this.renderTarget == null) {
                 this.renderTarget = ImGuiMCImpl.createRenderTarget(width, height, false);
             } else if (this.renderTarget.width != width || this.renderTarget.height != height) {
@@ -236,26 +240,39 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         }
     }
 
-    /^*
+    /**
      * Internal class to store containers for frequently used arrays.
      * This class helps minimize the number of object allocations on the JVM side,
      * thereby improving performance and reducing garbage collection overhead.
-     ^/
+     */
     private static final class Properties {
         private final ImVec4 clipRect = new ImVec4();
     }
 
     protected Data data = null;
     private final Properties props = new Properties();
+    private final List<Runnable> retiredResources=new ArrayList<>();
+    @Override public void afterDraw(Runnable action){retiredResources.add(Objects.requireNonNull(action));}
+    private void releaseRetired(){final var pending=List.copyOf(retiredResources);retiredResources.clear();RuntimeException failure=null;for(var action:pending){try{action.run();}catch(RuntimeException error){if(failure==null)failure=error;else failure.addSuppressed(error);}}if(failure!=null)throw failure;}
+    private final Map<com.mojang.renderpearl.api.GpuFormat,com.mojang.renderpearl.api.pipeline.CompiledRenderPipeline> pipelines=new HashMap<>();
+    private com.mojang.renderpearl.api.pipeline.CompiledRenderPipeline pipeline(com.mojang.renderpearl.api.GpuFormat format) {
+        return pipelines.computeIfAbsent(format,key->{
+            try(var source=new com.mojang.renderpearl.api.pipeline.ShaderSource(){
+                public String getShader(Identifier id,ShaderType type){String text=SOURCES_MAP.get(id);if(text==null)throw new IllegalArgumentException("Unknown ImGui shader: "+id);return text;}
+                public CachedIncludeSource getInclude(Identifier id){throw new IllegalArgumentException("ImGui inline shader has no include: "+id);}
+                public void close(){}
+            }) { final var compiled=RenderSystem.getDevice().compilePipeline(createPipeline(key),source,Runnable::run).join().finishCompile();if(compiled==null)throw new IllegalStateException("Failed native ImGui pipeline");return compiled;}
+        });
+    }
 
     protected Data newData() {
         return new Data();
     }
 
     private void clearTextures() {
-        //? if >= 1.21.11 {
-        /^this.data.samplers.clear();
-        ^///? }
+        
+        this.data.samplers.clear();
+        
 
         if (this.data.textures.isEmpty()) {
             return;
@@ -275,11 +292,11 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         final GpuDevice device = RenderSystem.getDevice();
 
         final ImGuiIO io = ImGui.getIO();
-        //? if <=26.1 {
-        io.setBackendRendererName("imgui-java_impl_" + device.getBackendName());
-        //? } else {
-        /^io.setBackendRendererName("imgui-java_impl_" + device.getDeviceInfo().backendName());
-         ^///? }
+        
+        
+
+        io.setBackendRendererName("imgui-java_impl_" + device.getDeviceInfo().backendName());
+         
 
         // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
         io.addBackendFlags(ImGuiBackendFlags.RendererHasVtxOffset);
@@ -292,23 +309,23 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         }
     }
 
-    //? if >=26.2 {
-    /^@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private void renderDrawData(final ImDrawData drawData, final ViewportData data, final Optional<org.joml.Vector4fc> clearColor) {
-        ^///? } else {
+    
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private void renderDrawData(final ImDrawData drawData, final ViewportData data, final OptionalInt clearColor) {
-        //? }
+    private void renderDrawData(final ImDrawData drawData, final ViewportData data, final Optional<org.joml.Vector4fc> clearColor) {
+        
+    
+
+
 
         final GpuDevice device = RenderSystem.getDevice();
         final RenderTarget renderTarget = data.renderTarget;
 
         // Make sure this data is never allocated on another context
-        device.precompilePipeline(PIPELINE, ImGuiRenderImplRenderSystem::getShaderSource);
+        final var compiled=pipeline(renderTarget.getColorTexture().getFormat());
 
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-        final int fbWidth = (int) (drawData.getDisplaySizeX() * drawData.getFramebufferScaleX());
-        final int fbHeight = (int) (drawData.getDisplaySizeY() * drawData.getFramebufferScaleY());
+        final int fbWidth = renderTarget.width;
+        final int fbHeight = renderTarget.height;
         if (fbWidth <= 0 || fbHeight <= 0) {
             data.clearVertexData(0);
             return;
@@ -328,8 +345,8 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         // Will project scissor/clipping rectangles into framebuffer space
         final float clipOffX = drawData.getDisplayPosX(); // (0,0) unless using multi-viewports
         final float clipOffY = drawData.getDisplayPosY(); // (0,0) unless using multi-viewports
-        final float clipScaleX = drawData.getFramebufferScaleX(); // (1,1) unless using retina display which are often (2,2)
-        final float clipScaleY = drawData.getFramebufferScaleY(); // (1,1) unless using retina display which are often (2,2)
+        final float clipScaleX = fbWidth/drawData.getDisplaySizeX(); // (1,1) unless using retina display which are often (2,2)
+        final float clipScaleY = fbHeight/drawData.getDisplaySizeY(); // (1,1) unless using retina display which are often (2,2)
 
         if (ImDrawData.sizeOfImDrawIdx() != data.elementSize) {
             final Iterator<GpuBuffer> iterator = data.indexData.iterator();
@@ -395,7 +412,7 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         if (data.projectionMatrixBuffer == null) {
             data.projectionMatrixBuffer = new CachedImguiOrthoBuffer(-1.0F, 1.0F);
         }
-        final GpuBufferSlice projectionMatrixBuffer = data.projectionMatrixBuffer.getBuffer(L, R, B, T);
+        final GpuBufferSlice projectionMatrixBuffer = data.projectionMatrixBuffer.getBuffer(commandEncoder,L, R, B, T);
 
         final GpuTextureView colorTexture = renderTarget.getColorTextureView();
         final int width = colorTexture.getWidth(0);
@@ -404,7 +421,7 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
                 () -> "ImGui",
                 colorTexture,
                 clearColor)) {
-            renderPass.setPipeline(PIPELINE);
+            renderPass.setPipeline(compiled);
             renderPass.setUniform("Projection", projectionMatrixBuffer);
 
             // Render command lists
@@ -412,13 +429,13 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
                 final GpuBuffer vertexBuffer = data.vertexData.get(n);
                 final GpuBuffer indexBuffer = data.indexData.get(n);
 
-                //? if >=26.2 {
-                /^renderPass.setVertexBuffer(0, vertexBuffer.slice());
-                renderPass.setIndexBuffer(indexBuffer, data.elementSize == 2 ? com.mojang.blaze3d.IndexType.SHORT : com.mojang.blaze3d.IndexType.INT);
-                ^///? } else {
-                renderPass.setVertexBuffer(0, vertexBuffer);
-                renderPass.setIndexBuffer(indexBuffer, data.elementSize == 2 ? VertexFormat.IndexType.SHORT : VertexFormat.IndexType.INT);
-                //? }
+                
+                renderPass.setVertexBuffer(0, vertexBuffer.slice());
+                renderPass.setIndexBuffer(indexBuffer, data.elementSize == 2 ? com.mojang.renderpearl.api.pipeline.IndexType.SHORT : com.mojang.renderpearl.api.pipeline.IndexType.INT);
+                
+                
+
+
 
                 final int cmdBufferSize = drawData.getCmdListCmdBufferSize(n);
                 for (int cmdIdx = 0; cmdIdx < cmdBufferSize; cmdIdx++) {
@@ -435,7 +452,7 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
 
                     // Apply scissor/clipping rectangle (Y is inverted in OpenGL)
                     final int minX = Math.max((int) clipMinX, 0);
-                    final int minY = Math.max((int) (fbHeight - clipMaxY), 0);
+                    final int minY = Math.max((int) clipMinY, 0);
                     if (width < minX || height < minY) {
                         continue;
                     }
@@ -454,27 +471,28 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
                         throw new IllegalStateException("Texture ID is 0");
                     }
 
-                    //? if >=1.21.11 {
-                    /^final com.mojang.blaze3d.textures.GpuSampler defaultSampler = RenderSystem.getSamplerCache().getSampler(
-                            com.mojang.blaze3d.textures.AddressMode.CLAMP_TO_EDGE,
-                            com.mojang.blaze3d.textures.AddressMode.CLAMP_TO_EDGE,
-                            com.mojang.blaze3d.textures.FilterMode.LINEAR,
-                            com.mojang.blaze3d.textures.FilterMode.LINEAR,
+                    
+                    final com.mojang.renderpearl.api.textures.GpuSampler defaultSampler = RenderSystem.getSamplerCache().getSampler(
+                            com.mojang.renderpearl.api.textures.AddressMode.CLAMP_TO_EDGE,
+                            com.mojang.renderpearl.api.textures.AddressMode.CLAMP_TO_EDGE,
+                            com.mojang.renderpearl.api.textures.FilterMode.LINEAR,
+                            com.mojang.renderpearl.api.textures.FilterMode.LINEAR,
                             true);
-                    final com.mojang.blaze3d.textures.GpuSampler sampler = textureId == 1 ? defaultSampler : this.data.samplers.get((int) (textureId - 2));
-                    renderPass.bindTexture("Texture", textureId == 1 ? this.data.fontTextureView : this.data.textures.get((int) (textureId - 2)), sampler != null ? sampler : defaultSampler);
-                    ^///?} else {
-                    renderPass.bindSampler("Texture", textureId == 1 ? this.data.fontTextureView : this.data.textures.get((int) (textureId - 2)));
-                     //?}
+                    final com.mojang.renderpearl.api.textures.GpuSampler sampler = textureId == 1 ? defaultSampler : this.data.samplers.get((int) (textureId - 2));
+                    renderPass.setUniform("Texture", textureId == 1 ? this.data.fontTextureView : this.data.textures.get((int) (textureId - 2)), sampler != null ? sampler : defaultSampler);
+                    
+                    
 
-                    //? if >=26.2 {
-                    /^renderPass.drawIndexed(elemCount, 1, idxOffset, vtxOffset, 0);
-                     ^///? } else {
-                    renderPass.drawIndexed(vtxOffset, idxOffset, elemCount, 1);
-                    //? }
+
+                    
+                    renderPass.drawIndexed(elemCount, 1, idxOffset, vtxOffset, 0);
+                     
+                    
+
                 }
             }
         }
+        commandEncoder.submit();
     }
 
     @Override
@@ -487,6 +505,7 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         io.setBackendRendererName(null);
         io.removeBackendFlags(ImGuiBackendFlags.RendererHasVtxOffset | ImGuiBackendFlags.RendererHasViewports);
         this.data = null;
+        releaseRetired();
     }
 
     @Override
@@ -502,21 +521,22 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
             this.data.mainViewportData = new ViewportData();
         }
         this.data.mainViewportData.renderTarget = renderTarget;
-        //? if >=26.2 {
-        /^this.renderDrawData(drawData, this.data.mainViewportData, Optional.empty());
-         ^///? } else {
-        this.renderDrawData(drawData, this.data.mainViewportData, OptionalInt.empty());
-        //? }
+        
+        this.renderDrawData(drawData, this.data.mainViewportData, Optional.empty());
+         
+        
+
     }
 
     @Override
     public void postDraw() {
-        this.clearTextures();
+        try{this.clearTextures();}finally{releaseRetired();}
     }
 
     @Override
     public void discard() {
         this.clearTextures();
+        releaseRetired();
         if (this.data.mainViewportData != null) {
             this.data.mainViewportData.clearVertexData(0);
         }
@@ -532,18 +552,18 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
     public long getImGuiId(final ImGuiTextureProvider texture, @Nullable final ImGuiSampler sampler) {
         long id = texture.imguimc$id();
 
-        if (id == 0) {
+        if (id == 0 || sampler != null) {
             final GpuTextureView view = switch (texture) {
                 case final AbstractTexture abstractTexture -> abstractTexture.getTextureView();
                 case final GpuTextureView gpuTextureView -> gpuTextureView;
                 default -> throw new IllegalArgumentException("Unexpected value: " + texture);
             };
-            //? if >= 1.21.11 {
-            /^id = ((ImGuiRenderImplRenderSystem) ImGuiMCImpl.handler.getRenderer()).addTexture(view, (com.mojang.blaze3d.textures.GpuSampler) sampler);
-            ^///? } else {
-            id = ((ImGuiRenderImplRenderSystem) ImGuiMCImpl.handler.getRenderer()).addTexture(view);
-             //? }
-            texture.imguimc$setId(id);
+            
+            id = ((ImGuiRenderImplRenderSystem) ImGuiMCImpl.handler.getRenderer()).addTexture(view, (com.mojang.renderpearl.api.textures.GpuSampler) sampler);
+            
+            
+
+            if(sampler==null)texture.imguimc$setId(id);
         }
 
         return id;
@@ -557,11 +577,11 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         // If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
         final ImInt width = new ImInt();
         final ImInt height = new ImInt();
-        //? if >=1.21.9 {
-        /^final java.nio.ByteBuffer pixels = fontAtlas.getTexDataAsRGBA32(width, height);
-        ^///?} else {
-        final java.nio.IntBuffer pixels = fontAtlas.getTexDataAsRGBA32(width, height).asIntBuffer();
-         //?}
+        
+        final java.nio.ByteBuffer pixels = fontAtlas.getTexDataAsRGBA32(width, height);
+        
+        
+
 
         // TODO use GetTexDataAsAlpha8 instead
 
@@ -569,17 +589,17 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         this.data.fontTexture = device.createTexture(
                 "ImGui Font Atlas",
                 GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING,
-                //? if <= 26.1 {
-                com.mojang.blaze3d.textures.TextureFormat.RGBA8,
-                //? } else {
-                /^com.mojang.blaze3d.GpuFormat.RGBA8_UNORM,
-                 ^///? }
+                
+                
+
+                com.mojang.renderpearl.api.GpuFormat.RGBA8_UNORM,
+                 
                 width.get(),
                 height.get(),
                 1,
                 1);
-        //? if >=26.2-pre-3 {
-        /^device.createCommandEncoder().writeToTexture(
+        
+        final var upload=device.createCommandEncoder();upload.writeToTexture(
                 this.data.fontTexture,
                 pixels,
                 0,
@@ -589,19 +609,20 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
                 width.get(),
                 height.get()
         );
-        ^///? } else {
-        device.createCommandEncoder().writeToTexture(
-                this.data.fontTexture,
-                pixels,
-                com.mojang.blaze3d.platform.NativeImage.Format.RGBA,
-                0,
-                0,
-                0,
-                0,
-                width.get(),
-                height.get()
-        );
-        //? }
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+        upload.submit();
         this.data.fontTextureView = device.createTextureView(this.data.fontTexture);
 
         // Store our identifier
@@ -627,6 +648,7 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
             this.data.mainViewportData = null;
         }
         this.destroyFontsTexture();
+        pipelines.values().forEach(com.mojang.renderpearl.api.pipeline.CompiledRenderPipeline::close);pipelines.clear();
     }
 
     //--------------------------------------------------------------------------------------------------------
@@ -637,17 +659,17 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
 
     private final class RendererRenderWindowFunction extends ImPlatformFuncViewport {
 
-        //? if >=26.2 {
-        /^private static final org.joml.Vector4fc CLEAR_COLOR = new org.joml.Vector4f();
-         ^///? }
+        
+        private static final org.joml.Vector4fc CLEAR_COLOR = new org.joml.Vector4f();
+         
 
         @Override
         public void accept(final ImGuiViewport vp) {
-            //? if >=26.2 {
-            /^final Optional<org.joml.Vector4fc> clearColor = vp.hasFlags(ImGuiViewportFlags.NoRendererClear) ? Optional.empty() : Optional.of(CLEAR_COLOR);
-             ^///? } else {
-            final OptionalInt clearColor = vp.hasFlags(ImGuiViewportFlags.NoRendererClear) ? OptionalInt.empty() : OptionalInt.of(0);
-            //? }
+            
+            final Optional<org.joml.Vector4fc> clearColor = vp.hasFlags(ImGuiViewportFlags.NoRendererClear) ? Optional.empty() : Optional.of(CLEAR_COLOR);
+             
+            
+
 
             final ViewportData data = ImGuiMCImpl.getRenderData(vp, ViewportData::new);
             if (data != null) {
@@ -665,4 +687,3 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
         ImGui.destroyPlatformWindows();
     }
 }
-*///?}

@@ -34,11 +34,11 @@ public class ImGuiCharSink implements FormattedCharSink {
     }
 
     private static void openUri(final URI uri) {
-        //? if >=1.21.11 {
-        /*net.minecraft.util.Util.getPlatform().openUri(uri);
-         *///? } else {
-        net.minecraft.Util.getPlatform().openUri(uri);
-        //? }
+        
+        if(!org.lwjgl.sdl.SDLMisc.SDL_OpenURL(uri.toString()))throw new IllegalStateException("Cannot open URI: "+uri);
+         
+        
+
     }
 
     public void setup() {
@@ -94,8 +94,8 @@ public class ImGuiCharSink implements FormattedCharSink {
         }
     }
 
-    //? if >=1.21.5 {
-    /*private void handleClick() {
+    
+    private void handleClick() {
         final Minecraft minecraft = Minecraft.getInstance();
         switch (this.clickEvent) {
             case ClickEvent.OpenUrl(final URI uri1): {
@@ -104,25 +104,25 @@ public class ImGuiCharSink implements FormattedCharSink {
                 }
 
                 if (minecraft.options.chatLinksPrompt().get()) {
-                    //? if >=26.2 {
-                    /^final Screen oldScreen = minecraft.gui.screen();
+                    
+                    final Screen oldScreen = minecraft.gui.screen();
                     minecraft.gui.setScreen(new net.minecraft.client.gui.screens.ConfirmLinkScreen((confirm) -> {
                         if (confirm) {
                             openUri(uri1);
                         }
 
                         minecraft.gui.setScreen(oldScreen);
-                    }, uri1.toString(), false));
-                    ^///? } else {
-                    final Screen oldScreen = minecraft.screen;
-                    minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmLinkScreen((confirm) -> {
-                        if (confirm) {
-                            openUri(uri1);
-                        }
+                    }, uri1, false));
+                    
+                    
 
-                        minecraft.setScreen(oldScreen);
-                    }, uri1.toString(), false));
-                    //? }
+
+
+
+
+
+
+
                 } else {
                     openUri(uri1);
                 }
@@ -138,16 +138,16 @@ public class ImGuiCharSink implements FormattedCharSink {
                     break;
                 }
 
-                //? if >=26.2 {
-                /^player.connection.sendUnattendedCommand(net.minecraft.commands.Commands.trimOptionalPrefix(cmd), minecraft.gui.screen());
-                ^///? } else if >=1.21.6 {
-                /^player.connection.sendUnattendedCommand(net.minecraft.commands.Commands.trimOptionalPrefix(cmd), minecraft.screen);
-                ^///? } else {
-                final String command = cmd.startsWith("/") ? cmd.substring(1) : cmd;
-                if (!minecraft.player.connection.sendUnsignedCommand(command)) {
-                    ImGuiMCImpl.LOGGER.error("Not allowed to run command with signed argument from click event: '{}'", command);
-                }
-                //? }
+                
+                player.connection.sendUnattendedCommand(net.minecraft.commands.Commands.trimOptionalPrefix(cmd), minecraft.gui.screen());
+                
+                
+
+                
+
+
+
+
                 break;
             }
             case ClickEvent.CopyToClipboard(final String text): {
@@ -167,13 +167,13 @@ public class ImGuiCharSink implements FormattedCharSink {
     private void handleHover() {
         final Minecraft minecraft = Minecraft.getInstance();
         switch (this.hoverEvent) {
-            //? if >=26.1 {
-            /^case HoverEvent.ShowItem(final net.minecraft.world.item.ItemStackTemplate item): {
+            
+            case HoverEvent.ShowItem(final net.minecraft.world.item.ItemStackTemplate item): {
                 final List<Component> tooltip = Screen.getTooltipFromItem(minecraft, item.create());
-            ^///? } else {
-            case HoverEvent.ShowItem(final net.minecraft.world.item.ItemStack stack): {
-                final List<Component> tooltip = Screen.getTooltipFromItem(minecraft, stack);
-            //? }
+            
+            
+
+
                 ImGui.beginTooltip();
                 for (final Component line : tooltip) {
                     ImGuiMC.component(line, ImGui.getFontSize() * 35.0f);
@@ -203,92 +203,92 @@ public class ImGuiCharSink implements FormattedCharSink {
             }
         }
     }
-    *///? } else {
-    private void handleClick() {
-        final Minecraft minecraft = Minecraft.getInstance();
-        final String value = this.clickEvent.getValue();
-        if (this.clickEvent.getAction() == ClickEvent.Action.OPEN_URL) {
-            try {
-                final URI uri = new URI(value);
-                final String scheme = uri.getScheme();
-                if (scheme == null) {
-                    throw new java.net.URISyntaxException(value, "Missing protocol");
-                }
+    
+    
 
-                if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
-                    throw new java.net.URISyntaxException(value, "Unsupported protocol: " + scheme.toLowerCase(java.util.Locale.ROOT));
-                }
 
-                openUri(uri);
-            } catch (final java.net.URISyntaxException e) {
-                ImGuiMCImpl.LOGGER.error("Can't open url for {}", this.clickEvent, e);
-            }
-            return;
-        }
 
-        if (this.clickEvent.getAction() == ClickEvent.Action.OPEN_FILE) {
-            openUri(new java.io.File(value).toURI());
-            return;
-        }
 
-        // TODO
-        if (this.clickEvent.getAction() == ClickEvent.Action.SUGGEST_COMMAND) {
-            return;
-        }
 
-        if (this.clickEvent.getAction() == ClickEvent.Action.RUN_COMMAND) {
-            final String s = net.minecraft.util.StringUtil.filterText(this.clickEvent.getValue());
-            if (s.startsWith("/")) {
-                final LocalPlayer player = Minecraft.getInstance().player;
-                if (player != null && !player.connection.sendUnsignedCommand(s.substring(1))) {
-                    ImGuiMCImpl.LOGGER.error("Not allowed to run command with signed argument from click event: '{}'", s);
-                }
-            } else {
-                ImGuiMCImpl.LOGGER.error("Failed to run command without '/' prefix from click event: '{}'", s);
-            }
-            return;
-        }
 
-        if (this.clickEvent.getAction() == ClickEvent.Action.COPY_TO_CLIPBOARD) {
-            minecraft.keyboardHandler.setClipboard(value);
-            return;
-        }
 
-        ImGuiMCImpl.LOGGER.error("Don't know how to handle {}", this.clickEvent);
-    }
 
-    private void handleHover() {
-        final Minecraft minecraft = Minecraft.getInstance();
-        final HoverEvent.ItemStackInfo stack = this.hoverEvent.getValue(HoverEvent.Action.SHOW_ITEM);
-        if (stack != null) {
-            ImGui.beginTooltip();
-            final List<Component> tooltip = Screen.getTooltipFromItem(minecraft, stack.getItemStack());
-            for (final Component line : tooltip) {
-                ImGuiMC.component(line, ImGui.getFontSize() * 35.0f);
-            }
-            ImGui.endTooltip();
-            return;
-        }
 
-        final HoverEvent.EntityTooltipInfo entity = this.hoverEvent.getValue(HoverEvent.Action.SHOW_ENTITY);
-        if (entity != null) {
-            if (minecraft.options.advancedItemTooltips) {
-                ImGui.beginTooltip();
-                final List<Component> tooltip = entity.getTooltipLines();
-                for (final Component line : tooltip) {
-                    ImGuiMC.component(line, ImGui.getFontSize() * 35.0f);
-                }
-                ImGui.endTooltip();
-            }
-            return;
-        }
 
-        final Component showText = this.hoverEvent.getValue(HoverEvent.Action.SHOW_TEXT);
-        if (showText != null) {
-            ImGui.beginTooltip();
-            ImGuiMC.component(showText, ImGui.getFontSize() * 35.0f);
-            ImGui.endTooltip();
-        }
-    }
-    //? }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

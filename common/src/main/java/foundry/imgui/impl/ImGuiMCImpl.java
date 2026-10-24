@@ -9,7 +9,7 @@ import imgui.ImGui;
 import imgui.ImGuiViewport;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
@@ -52,50 +52,50 @@ public final class ImGuiMCImpl {
         }
     }
 
-    public static ResourceLocation path(final String path) {
-        return ResourceLocation.fromNamespaceAndPath(ImGuiMC.MOD_ID, path);
+    public static Identifier path(final String path) {
+        return Identifier.fromNamespaceAndPath(ImGuiMC.MOD_ID, path);
     }
 
     public static RenderTarget getMainRenderTarget() {
-        //? if >= 26.2 {
-        /*return Minecraft.getInstance().gameRenderer.mainRenderTarget();
-         *///? } else {
-        return Minecraft.getInstance().getMainRenderTarget();
-        //? }
+        
+        return Minecraft.getInstance().gameRenderer.mainRenderTarget();
+         
+        
+
     }
 
     public static long getWindowHandle(final Window window) {
-        //? if >=1.21.9 {
-        /*return window.handle();
-        *///? } else {
-        return window.getWindow();
-         //? }
+        
+        return window.handle();
+        
+        
+
     }
 
     public static TextureTarget createRenderTarget(final int width, final int height, final boolean depth) {
-        //? if >=26.2 {
-        /*return new TextureTarget("ImGui", width, height, depth, com.mojang.blaze3d.GpuFormat.RGBA8_UNORM);
-         *///? } else if >=1.21.5 {
-        /*return new TextureTarget("ImGui", width, height, depth);
-        *///? } else if >=1.21.2 {
-        /*final TextureTarget renderTarget = new TextureTarget(width, height, depth);
-          renderTarget.setClearColor(0,0,0,1);
-          renderTarget.clear();
-          return renderTarget;
-         *///? } else {
-        final TextureTarget renderTarget = new TextureTarget(width, height, depth, net.minecraft.client.Minecraft.ON_OSX);
-        renderTarget.setClearColor(0, 0, 0, 1);
-        renderTarget.clear(net.minecraft.client.Minecraft.ON_OSX);
-        return renderTarget;
-        //? }
+        
+        return new TextureTarget("ImGui", width, height, com.mojang.renderpearl.api.GpuFormat.RGBA8_UNORM, depth ? com.mojang.renderpearl.api.GpuFormat.D32_FLOAT : null);
+         
+        
+
+        
+
+
+
+
+        
+
+
+
+
     }
 
     public static void resizeRenderTarget(final RenderTarget renderTarget, final int width, final int height) {
-        //? if >=1.21.2 {
-        /*renderTarget.resize(width, height);
-        *///? } else {
-        renderTarget.resize(width, height, net.minecraft.client.Minecraft.ON_OSX);
-         //? }
+        
+        renderTarget.resize(width, height);
+        
+        
+
     }
 
     public static float getContentScaleForMonitor(final long monitor) {

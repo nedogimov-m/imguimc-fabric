@@ -21,19 +21,19 @@ public interface ImGuiMCPlatform extends ImGuiLoadEvent, ImGuiLoadEvents.Pre, Im
 
     @Contract(pure = true)
     default ImGuiRenderer createRenderer() {
-        //? if < 1.21.6 {
-        return new foundry.imgui.impl.renderer.v0.ImGuiRendererGL33();
-        //? } else {
-        /*return new foundry.imgui.impl.renderer.v1.ImGuiRenderImplRenderSystem();
-        *///? }
+        
+        
+
+        return new foundry.imgui.impl.renderer.v1.ImGuiRenderImplRenderSystem();
+        
     }
 
     @Contract(pure = true)
     default ImGuiFontManager createFontManager() {
-        //? if < 1.21.4 {
-        return new foundry.imgui.impl.font.v0.ImGuiFontManagerImpl();
-        //? } else {
-        /*return new foundry.imgui.impl.font.v1.ImGuiFontManagerImpl();
-        *///? }
+        
+        
+
+        return new foundry.imgui.impl.font.v1.ImGuiFontManagerImpl();
+        
     }
 }

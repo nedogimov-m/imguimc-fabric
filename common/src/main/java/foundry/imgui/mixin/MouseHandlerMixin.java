@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import foundry.imgui.api.ImGuiMC;
 import imgui.ImGui;
 import net.minecraft.client.MouseHandler;
+import net.minecraft.client.input.MouseButtonInfo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -13,10 +14,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(MouseHandler.class)
 public class MouseHandlerMixin {
 
-    @Inject(method = {"onPress", "onButton"}, at = @At("HEAD"), cancellable = true)
-    public void mouseButtonCallback(final CallbackInfo ci) {
+    @Inject(method = "onButton", at = @At("HEAD"), cancellable = true)
+    public void mouseButtonCallback(final long window, final MouseButtonInfo button, final int action, final CallbackInfo ci) {
         try (final ImGuiMC.ActiveContext ctx = ImGuiMC.withImGui()) {
-            if (ctx != null && ctx.io().getWantCaptureMouse()) {
+            if (action != 0 && ctx != null && ctx.io().getWantCaptureMouse()) {
                 ci.cancel();
             }
         }

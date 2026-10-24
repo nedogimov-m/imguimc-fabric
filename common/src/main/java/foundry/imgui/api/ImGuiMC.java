@@ -12,7 +12,7 @@ import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
@@ -22,8 +22,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface ImGuiMC {
 
-    ResourceLocation FONT_JETBRAINS_MONO = ImGuiMCImpl.path("jetbrains_mono");
-    ResourceLocation FONT_DEFAULT = FONT_JETBRAINS_MONO;
+    Identifier FONT_JETBRAINS_MONO = ImGuiMCImpl.path("jetbrains_mono");
+    Identifier FONT_DEFAULT = FONT_JETBRAINS_MONO;
 
     String MOD_ID = "imguimc";
 
@@ -66,7 +66,7 @@ public interface ImGuiMC {
      * @return The font to use
      * @see ImGuiFontManager
      */
-    static ImFont getFont(@Nullable final ResourceLocation name, final boolean bold, final boolean italic) {
+    static ImFont getFont(@Nullable final Identifier name, final boolean bold, final boolean italic) {
         if (ImGuiMCImpl.handler == null) {
             throw new IllegalStateException("ImGui is not loaded");
         }
@@ -88,6 +88,10 @@ public interface ImGuiMC {
     /**
      * @return <code>true</code> if ImGui is currently loaded and able to be used
      */
+    static void afterDraw(Runnable action) {
+        if(ImGuiMCImpl.handler==null)action.run();else ImGuiMCImpl.handler.getRenderer().afterDraw(action);
+    }
+
     static boolean isImguiLoaded() {
         return ImGuiMCImpl.handler != null;
     }
@@ -111,13 +115,13 @@ public interface ImGuiMC {
      */
     @Contract(value = "null->fail", pure = true)
     static ImGuiTextureProvider getColorTexture(final RenderTarget renderTarget) {
-        //? if >=1.21.6 {
-        /*return getTexture(renderTarget.getColorTextureView());
-        *///? } else if >=1.21.5 {
-        /*return new foundry.imgui.impl.renderer.v0.RawOpenGlTextureProvider(((com.mojang.blaze3d.opengl.GlTexture) renderTarget.getColorTexture()).glId());
-        *///? } else {
-        return new foundry.imgui.impl.renderer.v0.RawOpenGlTextureProvider(renderTarget.getColorTextureId());
-        //? }
+        
+        return getTexture(renderTarget.getColorTextureView());
+        
+        
+
+        
+
     }
 
     /**
@@ -128,44 +132,44 @@ public interface ImGuiMC {
      */
     @Contract(value = "null->fail", pure = true)
     static @Nullable ImGuiTextureProvider getDepthTexture(final RenderTarget renderTarget) {
-        if (!renderTarget.useDepth) {
+        if (!renderTarget.hasDepth()) {
             return null;
         }
-        //? if >=1.21.6 {
-        /*return getTexture(renderTarget.getDepthTextureView());
-        *///? } else if >=1.21.5 {
-        /*return new foundry.imgui.impl.renderer.v0.RawOpenGlTextureProvider(((com.mojang.blaze3d.opengl.GlTexture) renderTarget.getDepthTexture()).glId());
-        *///? } else {
-        return new foundry.imgui.impl.renderer.v0.RawOpenGlTextureProvider(renderTarget.getDepthTextureId());
-        //? }
+        
+        return getTexture(renderTarget.getDepthTextureView());
+        
+        
+
+        
+
     }
 
-    //? if >= 1.21.6 {
+    
 
-    /*/^*
+    /**
      * Converts the specified gpu texture into a texture provider. The texture <strong>must</strong> be a 2D texture.
      *
      * @return The {@link ImGuiTextureProvider} for texture calls
      * @since 1.1.0
-     ^/
+     */
     @Contract(value = "null->null", pure = true)
-    static ImGuiTextureProvider getTexture(final com.mojang.blaze3d.textures.GpuTextureView texture) {
+    static ImGuiTextureProvider getTexture(final com.mojang.renderpearl.api.textures.GpuTextureView texture) {
         return (ImGuiTextureProvider) texture;
     }
-    *///? }
+    
 
-    //? if >= 1.21.11 {
-    /*/^*
+    
+    /**
      * Converts the specified gpu sampler into a texture provider.
      *
      * @return The {@link ImGuiSampler} for texture calls
      * @since 1.1.0
-     ^/
+     */
     @Contract(value = "null->null", pure = true)
-    static ImGuiSampler getSampler(final com.mojang.blaze3d.textures.GpuSampler sampler) {
+    static ImGuiSampler getSampler(final com.mojang.renderpearl.api.textures.GpuSampler sampler) {
         return (ImGuiSampler) sampler;
     }
-    *///? }
+    
 
     /**
      * Fully renders Minecraft text into ImGui.
@@ -202,19 +206,19 @@ public interface ImGuiMC {
      * @since 2.0.0
      */
     static ImFont getStyleFont(final Style style) {
-        //? if >=1.21.9 {
-        /*final ResourceLocation fontName;
+        
+        final Identifier fontName;
         if (net.minecraft.network.chat.FontDescription.DEFAULT.equals(style.getFont())) {
             fontName = FONT_JETBRAINS_MONO;
-        } else if (style.getFont() instanceof net.minecraft.network.chat.FontDescription.Resource(final ResourceLocation id)) {
+        } else if (style.getFont() instanceof net.minecraft.network.chat.FontDescription.Resource(final Identifier id)) {
             fontName = id;
         } else {
             fontName = FONT_JETBRAINS_MONO;
         }
         return getFont(fontName, style.isBold(), style.isItalic());
-        *///? } else {
-        return getFont(Style.DEFAULT_FONT.equals(style.getFont()) ? null : style.getFont(), style.isBold(), style.isItalic());
-        //? }
+        
+        
+
     }
 
     /**

@@ -1,0 +1,26 @@
+plugins { id 'net.fabricmc.fabric-loom' version "${loom_version}"; id 'maven-publish' }
+group='foundry.imguimc'
+version=project.mod_version
+base.archivesName='imguimc-fabric'
+repositories { mavenCentral(); maven { url='https://libraries.minecraft.net' } }
+sourceSets.main {
+    java.srcDirs=['common/src/main/java','fabric/src/main/java']
+    resources.srcDirs=['common/src/main/resources','fabric/src/main/resources']
+}
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    include(api('io.github.spair:imgui-java-binding:1.92.7.1'))
+    for(platform in ['macos','linux','windows']) include(runtimeOnly("io.github.spair:imgui-java-natives-${platform}:1.92.7.1"))
+    compileOnly 'org.jetbrains:annotations:26.0.2'
+}
+java { toolchain.languageVersion=JavaLanguageVersion.of(25); withSourcesJar() }
+tasks.withType(JavaCompile).configureEach { options.release=25; options.encoding='UTF-8' }
+processResources {
+    inputs.property 'version',project.version
+    filesMatching('fabric.mod.json') { expand id:'imguimc',version:project.version,name:'ImGuiMC',description:'Native ImGui Minecraft bindings for Fabric 26.3 and RenderPearl/SDL3',author:'Ocelot; Fabric 26.3 port contributors',license:'LGPL-3.0-only',minecraft:'26.3',java:'25' }
+    filesMatching('*.mixins.json') { expand id:'imguimc' }
+}
+jar { from('LICENSE') { into 'META-INF' }; from('UPSTREAM.json') { into 'META-INF'; rename { 'imguimc-upstream.json' } } }
+sourcesJar { from('LICENSE') { into 'META-INF' } }

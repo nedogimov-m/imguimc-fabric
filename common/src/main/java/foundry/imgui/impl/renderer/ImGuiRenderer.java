@@ -29,6 +29,9 @@ public interface ImGuiRenderer extends NativeResource {
     default void postDraw() {
     }
 
+    /** Run only after this frame's real GPU draws were submitted or discarded. */
+    void afterDraw(Runnable action);
+
     void discard();
 
     void recreateFontsTexture();
