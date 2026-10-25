@@ -2,6 +2,8 @@
 
 Native ImGui Minecraft bindings for Fabric, RenderPearl and SDL3 on Minecraft 26.3. Upstream revision and source attribution: `UPSTREAM.json`; license: `LICENSE`.
 
+Native input/rendering checks and fixes for Vulkan orientation and offscreen clipping: [GAMEPLAY_AUDIT.md](GAMEPLAY_AUDIT.md).
+
 ## Build
 
 Use JDK 25 and run `./gradlew assemble --no-configuration-cache`. Output: `build/libs/imguimc-fabric-*.jar`. Binding and platform-native dependencies are resolved from Maven and nested by the build.

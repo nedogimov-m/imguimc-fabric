@@ -39,9 +39,9 @@ public class CachedImguiOrthoBuffer implements AutoCloseable {
 
     public GpuBufferSlice getBuffer(CommandEncoder encoder,final float left, final float right, final float bottom, final float top) {
         if (this.left != left || this.right != right || this.bottom != bottom || this.top != top) {
-            // Vulkan's native viewport maps NDC -Y to the top; OpenGL maps +Y to the top.
-            final boolean nativeYDown=RenderSystem.getDevice().getDeviceInfo().backendName().toLowerCase(java.util.Locale.ROOT).contains("vulkan");
-            final Matrix4f matrix4f = this.projectionMatrix.setOrtho(left, right, nativeYDown?top:bottom, nativeYDown?bottom:top, this.zNear, this.zFar);
+            // RenderTarget keeps Minecraft's bottom-left convention on every backend.
+            // Vulkan's surface blit already flips it for presentation, as does Screenshot.
+            final Matrix4f matrix4f = this.projectionMatrix.setOrtho(left, right, bottom, top, this.zNear, this.zFar);
 
             try (final MemoryStack stack = MemoryStack.stackPush()) {
                 final ByteBuffer buffer = stack.malloc(64); matrix4f.get(buffer);

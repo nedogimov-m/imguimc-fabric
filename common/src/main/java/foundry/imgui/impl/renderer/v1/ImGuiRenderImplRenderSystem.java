@@ -450,16 +450,17 @@ public class ImGuiRenderImplRenderSystem implements ImGuiRenderer {
                         continue;
                     }
 
-                    // Apply scissor/clipping rectangle (Y is inverted in OpenGL)
-                    final int minX = Math.max((int) clipMinX, 0);
-                    final int minY = Math.max((int) clipMinY, 0);
-                    if (width < minX || height < minY) {
+                    // Match the bottom-left RenderTarget projection before native surface presentation.
+                    // Clamp both edges: a window partly offscreen must not widen its visible clip.
+                    final int minX = Math.clamp((int) Math.floor(clipMinX), 0, width);
+                    final int minY = Math.clamp((int) Math.floor(clipMinY), 0, height);
+                    final int maxX = Math.clamp((int) Math.ceil(clipMaxX), 0, width);
+                    final int maxY = Math.clamp((int) Math.ceil(clipMaxY), 0, height);
+                    if (maxX <= minX || maxY <= minY) {
                         continue;
                     }
 
-                    final int scissorWidth = Math.clamp((int) (clipMaxX - clipMinX), 0, width - minX);
-                    final int scissorHeight = Math.clamp((int) (clipMaxY - clipMinY), 0, height - minY);
-                    renderPass.enableScissor(minX, minY, scissorWidth, scissorHeight);
+                    renderPass.enableScissor(minX, height - maxY, maxX - minX, maxY - minY);
 
                     // Bind texture, Draw
                     final long textureId = drawData.getCmdListCmdBufferTextureId(n, cmdIdx);
